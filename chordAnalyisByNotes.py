@@ -86,7 +86,7 @@ def processSong(gtSong, song):
         isGreater = True
         while isGreater:
             #print chord.start, chord.end, gtSong[idx].start, gtSong[idx].end
-            #Si la intersección es mayor a INTERSECTION_TRESHOLD ms
+            #Si la intersección es mayor a MIN_CHORD_DURATION 
             if min(chord.end, gtSong[idx].end) - max(chord.start, gtSong[idx].start) > MIN_CHORD_DURATION:
                 chordTable.setChords(gtSong[idx], chord)
             isGreater = chord.end > gtSong[idx].end
@@ -124,6 +124,21 @@ def mergeAllSongs():
         j = json.dumps(allChords.chordTable)
         print >> f, j
         
+def mergeInFolder(folderPath, outFile = 'allChords.jsonN'):
+    #Merge all individual json files into one
+    #baseFolder = '../outputs/billboard2012/BillboardTest2012/'
+    allChords = ChordTable()
+    for filename in glob.glob(folderPath + '*.jsonN'):
+        tmp = ChordTable(filename)
+        allChords.mergeTable(tmp.chordTable)
+    with open(folderPath + outFile, 'w') as f:
+        j = json.dumps(allChords.chordTable)
+        print >> f, j
+
+def mergeEachSubFolder(baseFolder = '../outputs/billboard2012/BillboardTest2012/'):
+    for subFolder in os.walk(baseFolder).next()[1]:     #Take only subs name
+        mergeInFolder(baseFolder + subFolder + '/')
+        
 def topXtopY(chordTable, x, y):
     #Return a dictionary trimmed to top X gtChords and top Y chords from a chordTable
     sortedTable = ChordTable()    
@@ -150,10 +165,11 @@ def countByChord(chordTable):
         allGT[gtChord] = counter
         counter = 0
     allGT = sorted(allGT.iteritems(), key = operator.itemgetter(1),
-                   reverse = True)
+                   reverse = True)  #Sort by descending order
     return allGT
     
 def save2csv(filename, chordTable):
+    #Save in filename the chordTable in csv format, open in json format
     row = ["","","","",""]
     columns = [["GT Label", "GT Notes", "Estim Label", "Estim Notes", "Count"]] #Containing all rows
     for gtChord in chordTable.keys():
@@ -168,11 +184,18 @@ def save2csv(filename, chordTable):
     with open(filename, 'w') as f:
         w = csv.writer(f)
         w.writerows(columns)
-        
+
+def csvEachMergedAlgorithm():
+    #save each allChords.jsonN into a csv file
+    baseFolder = '../outputs/billboard2012/BillboardTest2012/'
+    for filename in glob.iglob(os.path.join(baseFolder, '*', 'allChords.jsonN')):
+        tmp = ChordTable(filename)
+        outFile = filename[:-5]+'csv'   #Tomando que son .jsonN
+        save2csv(outFile, tmp.chordTable)
         
             
 if __name__ == "__main__":
-    #song1 = parseChords('../outputs/billboard2012/BillboardTest2012/Ground-truth/1002.lab')
-    #song2 = parseChords('../outputs/billboard2012/BillboardTest2012/CF2/1002.wav.txt')
+    song1 = parseChords('../outputs/billboard2012/BillboardTest2012/Ground-truth/1002.lab')
+    song2 = parseChords('../outputs/billboard2012/BillboardTest2012/CF2/1002.wav.txt')
 
         

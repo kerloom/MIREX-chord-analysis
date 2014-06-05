@@ -8,16 +8,24 @@ import os
 import glob
 import json
 import operator
+import csv
+import copy
 
 #Hacer pruebas para comprobar que quedó bien, aunque parece que si
 
 class Chord:
+#Data struct to include start, end, label.
     pass
 
 class ChordTable:
     
     def setChords(self, gtChord, chord):
     #Input chords as strings
+        NOTES = ['A', 'A#', 'Bb', 'B', 'Cb','C', 'C#', 'Db', 'D', 'D#', 'Eb',
+                 'E', 'E#', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab']
+                 
+        if chord in NOTES: chord += ':maj'      #Corrigiendo X por X:maj
+                 
         if gtChord not in self.chordTable.keys():
             self.chordTable[gtChord] = {}
         if chord not in self.chordTable[gtChord].keys():
@@ -67,13 +75,14 @@ def processSong(gtSong, song):
     idx = 0
     chordTable = ChordTable()
     chordTable.chordTable.clear()
+    MIN_CHORD_DURATION = .5
     #Avanza los dos cuando hay que cambiar chord
     for chord in song:
         isGreater = True
         while isGreater:
             #print chord.start, chord.end, gtSong[idx].start, gtSong[idx].end
-            #Si la intersección es mayor a 75 ms
-            if min(chord.end, gtSong[idx].end) - max(chord.start, gtSong[idx].start) > .075:
+            #Si la intersección es mayor a INTERSECTION_TRESHOLD ms
+            if min(chord.end, gtSong[idx].end) - max(chord.start, gtSong[idx].start) > MIN_CHORD_DURATION:
                 chordTable.setChords(gtSong[idx].label, chord.label)
             isGreater = chord.end > gtSong[idx].end
             if isGreater: 
@@ -81,7 +90,7 @@ def processSong(gtSong, song):
                 isGreater = False if idx >= len(gtSong) else True
     return chordTable
 
-def analyseChords():
+def analyseAllSongs():
     #Analyze chords vs ground truth and generate json files per song
     baseFolder = '../outputs/billboard2012/BillboardTest2012/'
     subDirs = os.walk(baseFolder).next()[1]
@@ -136,17 +145,25 @@ def countByChord(chordTable):
     allGT = sorted(allGT.iteritems(), key = operator.itemgetter(1),
                    reverse = True)
     return allGT
+    
+def save2csv(filename, chordTable):
+    row = ["","",""]
+    columns = [["Ground Truth","Estimation","Count"]] #Containing all rows
+    for gtChord in chordTable.keys():
+        row[0] = gtChord
+        for chord in chordTable[gtChord].keys():
+            row[1] = chord
+            row[2] = chordTable[gtChord][chord]
+            columns.append(copy.deepcopy(row))
+
+    with open(filename, 'w') as f:
+        w = csv.writer(f)
+        w.writerows(columns)
+        
+        
             
 if __name__ == "__main__":
     song1 = parseChords('../outputs/billboard2012/BillboardTest2012/Ground-truth/1002.lab')
     song2 = parseChords('../outputs/billboard2012/BillboardTest2012/CF2/1002.wav.txt')
-    a = ChordTable()
-    b = ChordTable()
-    a.setChords('a', 'a')
-    a.setChords('a', 'b')
-    a.setChords('b', 'b')
-    b.setChords('b', 'a')
-    b.setChords('b', 'b')
-    b.setChords('c', 'a')
 
         
